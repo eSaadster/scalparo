@@ -1,20 +1,23 @@
 """
 Trading Strategies Module
-Contains plug-and-play trading strategies
+Contains plug-and-play trading strategies with signal logging
 """
 import backtrader as bt
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Dict, Any
+from signal_extractor import StrategySignalLogger
 
 
-class BaseStrategy(bt.Strategy, ABC):
-    """Base class for all trading strategies"""
+class BaseStrategy(bt.Strategy, StrategySignalLogger):
+    """Base class for all trading strategies with signal logging"""
     
     params = (
         ('printlog', True),
     )
     
     def __init__(self):
+        bt.Strategy.__init__(self)
+        StrategySignalLogger.__init__(self)
         self.order = None
         self._initialize_indicators()
     
@@ -31,6 +34,16 @@ class BaseStrategy(bt.Strategy, ABC):
     @abstractmethod
     def should_sell(self) -> bool:
         """Define sell condition"""
+        pass
+    
+    @abstractmethod
+    def get_buy_reason(self) -> str:
+        """Get reason for buy signal"""
+        pass
+    
+    @abstractmethod
+    def get_sell_reason(self) -> str:
+        """Get reason for sell signal"""
         pass
     
     def log(self, txt: str, dt=None):
@@ -76,12 +89,22 @@ class BaseStrategy(bt.Strategy, ABC):
                 price = self.data.close[0]
                 size = (cash * 0.95) / price
 
+                # Log the buy signal
+                reason = self.get_buy_reason()
+                self.log_buy_signal(price, reason)
+                
                 self.log(f'BUY CREATE: Price: {price:.2f}, Size: {size:.6f}, Cash: {cash:.2f}')
                 self.order = self.buy(size=size)
         else:
             # In market, check if we should sell
             if self.should_sell():
-                self.log(f'SELL CREATE: Price: {self.data.close[0]:.2f}')
+                price = self.data.close[0]
+                
+                # Log the sell signal
+                reason = self.get_sell_reason()
+                self.log_sell_signal(price, reason)
+                
+                self.log(f'SELL CREATE: Price: {price:.2f}')
                 self.order = self.sell(size=self.position.size)
     
     def stop(self):
@@ -111,6 +134,14 @@ class SMAStrategy(BaseStrategy):
     def should_sell(self) -> bool:
         """Sell when price crosses below SMA"""
         return self.crossover[0] < 0
+    
+    def get_buy_reason(self) -> str:
+        """Get reason for buy signal"""
+        return f"Price crossed above SMA({self.params.sma_period})"
+    
+    def get_sell_reason(self) -> str:
+        """Get reason for sell signal"""
+        return f"Price crossed below SMA({self.params.sma_period})"
     
     @classmethod
     def get_params(cls) -> Dict[str, Any]:
@@ -149,6 +180,14 @@ class RSIStrategy(BaseStrategy):
     def should_sell(self) -> bool:
         """Sell when RSI is overbought"""
         return self.rsi[0] > self.params.rsi_upper
+    
+    def get_buy_reason(self) -> str:
+        """Get reason for buy signal"""
+        return f"RSI oversold: {self.rsi[0]:.1f} < {self.params.rsi_lower}"
+    
+    def get_sell_reason(self) -> str:
+        """Get reason for sell signal"""
+        return f"RSI overbought: {self.rsi[0]:.1f} > {self.params.rsi_upper}"
     
     @classmethod
     def get_params(cls) -> Dict[str, Any]:
@@ -206,6 +245,14 @@ class MACDStrategy(BaseStrategy):
         """Sell when MACD crosses below signal"""
         return self.crossover[0] < 0
     
+    def get_buy_reason(self) -> str:
+        """Get reason for buy signal"""
+        return f"MACD bullish crossover: MACD({self.macd.macd[0]:.4f}) > Signal({self.macd.signal[0]:.4f})"
+    
+    def get_sell_reason(self) -> str:
+        """Get reason for sell signal"""
+        return f"MACD bearish crossover: MACD({self.macd.macd[0]:.4f}) < Signal({self.macd.signal[0]:.4f})"
+    
     @classmethod
     def get_params(cls) -> Dict[str, Any]:
         """Get strategy parameters for UI"""
@@ -258,6 +305,14 @@ class BollingerBandsStrategy(BaseStrategy):
     def should_sell(self) -> bool:
         """Sell when price touches upper band"""
         return self.data.close[0] >= self.bb.lines.top[0]
+    
+    def get_buy_reason(self) -> str:
+        """Get reason for buy signal"""
+        return f"Price touched lower Bollinger Band: {self.data.close[0]:.2f} <= {self.bb.lines.bot[0]:.2f}"
+    
+    def get_sell_reason(self) -> str:
+        """Get reason for sell signal"""
+        return f"Price touched upper Bollinger Band: {self.data.close[0]:.2f} >= {self.bb.lines.top[0]:.2f}"
     
     @classmethod
     def get_params(cls) -> Dict[str, Any]:

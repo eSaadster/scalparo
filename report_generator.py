@@ -36,54 +36,113 @@ class ReportGenerator:
             'interval': self.config['interval']
         }
         
-        if self.strat:
-            # Returns Analysis
-            returns_analysis = self.strat.analyzers.returns.get_analysis()
-            metrics['returns'] = {
-                'total_return': returns_analysis.get('rtot', 0),
-                'average_return': returns_analysis.get('ravg', 0),
-                'annual_return': returns_analysis.get('rnorm', 0),
-                'annualized_return': returns_analysis.get('rnorm100', 0)
-            }
-            
-            # Risk Metrics
-            sharpe_analysis = self.strat.analyzers.sharpe.get_analysis()
-            drawdown_analysis = self.strat.analyzers.drawdown.get_analysis()
-            metrics['risk'] = {
-                'sharpe_ratio': sharpe_analysis.get('sharperatio', 'N/A'),
-                'max_drawdown': drawdown_analysis.get('max', {}).get('drawdown', 0),
-                'max_drawdown_period': drawdown_analysis.get('max', {}).get('len', 0),
-                'max_drawdown_money': drawdown_analysis.get('max', {}).get('moneydown', 0)
-            }
-            
-            # Trade Analysis
-            trades_analysis = self.strat.analyzers.trades.get_analysis()
-            total_closed = trades_analysis.get('total', {}).get('closed', 0)
-            
-            metrics['trades'] = {
-                'total_trades': trades_analysis.get('total', {}).get('total', 0),
-                'open_trades': trades_analysis.get('total', {}).get('open', 0),
-                'closed_trades': total_closed,
-                'winning_trades': trades_analysis.get('won', {}).get('total', 0),
-                'losing_trades': trades_analysis.get('lost', {}).get('total', 0),
-                'win_rate': 0 if total_closed == 0 else 
-                           trades_analysis.get('won', {}).get('total', 0) / total_closed * 100,
-                'avg_win': trades_analysis.get('won', {}).get('pnl', {}).get('average', 0),
-                'avg_loss': trades_analysis.get('lost', {}).get('pnl', {}).get('average', 0),
-                'best_trade': trades_analysis.get('won', {}).get('pnl', {}).get('max', 0),
-                'worst_trade': trades_analysis.get('lost', {}).get('pnl', {}).get('max', 0),
-                'max_consecutive_wins': trades_analysis.get('streak', {}).get('won', {}).get('longest', 0),
-                'max_consecutive_losses': trades_analysis.get('streak', {}).get('lost', {}).get('longest', 0)
-            }
-            
-            # System Quality
-            sqn_analysis = self.strat.analyzers.sqn.get_analysis()
-            vwr_analysis = self.strat.analyzers.vwr.get_analysis()
-            metrics['system_quality'] = {
-                'sqn': sqn_analysis.get('sqn', 'N/A'),
-                'sqn_trades': sqn_analysis.get('trades', 'N/A'),
-                'vwr': vwr_analysis.get('vwr', 'N/A')
-            }
+        if self.strat is not None and hasattr(self.strat, 'analyzers'):
+            try:
+                # Returns Analysis
+                if hasattr(self.strat.analyzers, 'returns'):
+                    returns_analysis = self.strat.analyzers.returns.get_analysis()
+                    metrics['returns'] = {
+                        'total_return': returns_analysis.get('rtot', 0),
+                        'average_return': returns_analysis.get('ravg', 0),
+                        'annual_return': returns_analysis.get('rnorm', 0),
+                        'annualized_return': returns_analysis.get('rnorm100', 0)
+                    }
+                
+                # Risk Metrics
+                risk_metrics = {}
+                if hasattr(self.strat.analyzers, 'sharpe'):
+                    sharpe_analysis = self.strat.analyzers.sharpe.get_analysis()
+                    risk_metrics['sharpe_ratio'] = sharpe_analysis.get('sharperatio', 'N/A')
+                else:
+                    risk_metrics['sharpe_ratio'] = 'N/A'
+                
+                if hasattr(self.strat.analyzers, 'drawdown'):
+                    drawdown_analysis = self.strat.analyzers.drawdown.get_analysis()
+                    risk_metrics.update({
+                        'max_drawdown': drawdown_analysis.get('max', {}).get('drawdown', 0),
+                        'max_drawdown_period': drawdown_analysis.get('max', {}).get('len', 0),
+                        'max_drawdown_money': drawdown_analysis.get('max', {}).get('moneydown', 0)
+                    })
+                else:
+                    risk_metrics.update({
+                        'max_drawdown': 0,
+                        'max_drawdown_period': 0,
+                        'max_drawdown_money': 0
+                    })
+                
+                metrics['risk'] = risk_metrics
+                
+                # Trade Analysis
+                if hasattr(self.strat.analyzers, 'trades'):
+                    trades_analysis = self.strat.analyzers.trades.get_analysis()
+                    total_closed = trades_analysis.get('total', {}).get('closed', 0)
+                    
+                    metrics['trades'] = {
+                        'total_trades': trades_analysis.get('total', {}).get('total', 0),
+                        'open_trades': trades_analysis.get('total', {}).get('open', 0),
+                        'closed_trades': total_closed,
+                        'winning_trades': trades_analysis.get('won', {}).get('total', 0),
+                        'losing_trades': trades_analysis.get('lost', {}).get('total', 0),
+                        'win_rate': 0 if total_closed == 0 else 
+                                   trades_analysis.get('won', {}).get('total', 0) / total_closed * 100,
+                        'avg_win': trades_analysis.get('won', {}).get('pnl', {}).get('average', 0),
+                        'avg_loss': trades_analysis.get('lost', {}).get('pnl', {}).get('average', 0),
+                        'best_trade': trades_analysis.get('won', {}).get('pnl', {}).get('max', 0),
+                        'worst_trade': trades_analysis.get('lost', {}).get('pnl', {}).get('max', 0),
+                        'max_consecutive_wins': trades_analysis.get('streak', {}).get('won', {}).get('longest', 0),
+                        'max_consecutive_losses': trades_analysis.get('streak', {}).get('lost', {}).get('longest', 0)
+                    }
+                else:
+                    # Default trade metrics when analyzer is not available
+                    metrics['trades'] = {
+                        'total_trades': 0,
+                        'open_trades': 0,
+                        'closed_trades': 0,
+                        'winning_trades': 0,
+                        'losing_trades': 0,
+                        'win_rate': 0,
+                        'avg_win': 0,
+                        'avg_loss': 0,
+                        'best_trade': 0,
+                        'worst_trade': 0,
+                        'max_consecutive_wins': 0,
+                        'max_consecutive_losses': 0
+                    }
+                
+                # System Quality
+                system_quality = {}
+                if hasattr(self.strat.analyzers, 'sqn'):
+                    sqn_analysis = self.strat.analyzers.sqn.get_analysis()
+                    system_quality['sqn'] = sqn_analysis.get('sqn', 'N/A')
+                    system_quality['sqn_trades'] = sqn_analysis.get('trades', 'N/A')
+                else:
+                    system_quality['sqn'] = 'N/A'
+                    system_quality['sqn_trades'] = 'N/A'
+                
+                if hasattr(self.strat.analyzers, 'vwr'):
+                    vwr_analysis = self.strat.analyzers.vwr.get_analysis()
+                    system_quality['vwr'] = vwr_analysis.get('vwr', 'N/A')
+                else:
+                    system_quality['vwr'] = 'N/A'
+                
+                metrics['system_quality'] = system_quality
+                
+            except Exception as e:
+                print(f"Warning: Error extracting analyzer data: {e}")
+                # Provide default metrics if analyzers fail
+                metrics['risk'] = {
+                    'sharpe_ratio': 'N/A',
+                    'max_drawdown': 0,
+                    'max_drawdown_period': 0,
+                    'max_drawdown_money': 0
+                }
+                metrics['trades'] = {
+                    'total_trades': 0, 'open_trades': 0, 'closed_trades': 0,
+                    'winning_trades': 0, 'losing_trades': 0, 'win_rate': 0,
+                    'avg_win': 0, 'avg_loss': 0, 'best_trade': 0, 'worst_trade': 0,
+                    'max_consecutive_wins': 0, 'max_consecutive_losses': 0
+                }
+                metrics['system_quality'] = {'sqn': 'N/A', 'sqn_trades': 'N/A', 'vwr': 'N/A'}
         
         return metrics
     
