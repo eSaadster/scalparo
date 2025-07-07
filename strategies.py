@@ -19,6 +19,7 @@ class BaseStrategy(bt.Strategy, StrategySignalLogger):
         bt.Strategy.__init__(self)
         StrategySignalLogger.__init__(self)
         self.order = None
+        self._execution_log = []  # Log execution prices
         self._initialize_indicators()
     
     @abstractmethod
@@ -58,6 +59,17 @@ class BaseStrategy(bt.Strategy, StrategySignalLogger):
             return
 
         if order.status in [order.Completed]:
+            # Log execution for extraction later
+            execution_record = {
+                'side': 'buy' if order.isbuy() else 'sell',
+                'price': order.executed.price,
+                'size': order.executed.size,
+                'value': order.executed.value,
+                'commission': order.executed.comm,
+                'datetime': self.datas[0].datetime.datetime(0)
+            }
+            self._execution_log.append(execution_record)
+            
             if order.isbuy():
                 self.log(f'BUY EXECUTED: Price: {order.executed.price:.2f}, '
                         f'Size: {order.executed.size:.6f}, '

@@ -646,6 +646,50 @@ if st.session_state.backtest_results:
                 color = "var(--success-color)" if win_rate > 50 else "var(--warning-color)" if win_rate > 30 else "var(--danger-color)"
                 st.markdown(f'<span class="signal-badge" style="background: rgba(240, 185, 11, 0.2); color: var(--accent-color); border: 1px solid var(--accent-color);">🎯 {win_rate:.1f}% Win Rate</span>', unsafe_allow_html=True)
 
+        # Execution price summary
+        execution_prices = results_data['signals'].get('execution_prices', {})
+        if execution_prices.get('total_executions', 0) > 0:
+            st.markdown("### 💰 Execution Price Analysis")
+            exec_col1, exec_col2, exec_col3, exec_col4 = st.columns(4)
+            
+            with exec_col1:
+                avg_buy = execution_prices.get('average_buy_price', 0)
+                if avg_buy > 0:
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-value metric-positive">${avg_buy:,.2f}</div>
+                        <div class="metric-label">Avg Buy Price</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            
+            with exec_col2:
+                avg_sell = execution_prices.get('average_sell_price', 0)
+                if avg_sell > 0:
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-value metric-negative">${avg_sell:,.2f}</div>
+                        <div class="metric-label">Avg Sell Price</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            
+            with exec_col3:
+                buy_executions = len(execution_prices.get('buy_executions', []))
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value metric-neutral">{buy_executions}</div>
+                    <div class="metric-label">Buy Executions</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with exec_col4:
+                sell_executions = len(execution_prices.get('sell_executions', []))
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value metric-neutral">{sell_executions}</div>
+                    <div class="metric-label">Sell Executions</div>
+                </div>
+                """, unsafe_allow_html=True)
+
     # Enhanced tabs
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "📈 Live Chart", 
@@ -779,6 +823,45 @@ if st.session_state.backtest_results:
                 with trade_col3:
                     st.metric("Best Trade", f"${trades.get('best_trade', 0):.2f}")
                     st.metric("Worst Trade", f"${trades.get('worst_trade', 0):.2f}")
+
+            # Execution price details
+            execution_prices = results_data['signals'].get('execution_prices', {})
+            if execution_prices.get('total_executions', 0) > 0:
+                st.markdown("#### 💱 Execution Price Details")
+                
+                exec_detail_col1, exec_detail_col2 = st.columns(2)
+                
+                with exec_detail_col1:
+                    st.markdown("**Buy Executions**")
+                    buy_executions = execution_prices.get('buy_executions', [])
+                    if buy_executions:
+                        buy_df = pd.DataFrame({
+                            'Execution #': range(1, len(buy_executions) + 1),
+                            'Price': [f"${price:,.2f}" for price in buy_executions]
+                        })
+                        st.dataframe(buy_df, use_container_width=True)
+                        
+                        # Buy price statistics
+                        st.markdown("**Buy Price Stats**")
+                        st.metric("Highest Buy", f"${max(buy_executions):,.2f}")
+                        st.metric("Lowest Buy", f"${min(buy_executions):,.2f}")
+                        st.metric("Price Range", f"${max(buy_executions) - min(buy_executions):,.2f}")
+                
+                with exec_detail_col2:
+                    st.markdown("**Sell Executions**")
+                    sell_executions = execution_prices.get('sell_executions', [])
+                    if sell_executions:
+                        sell_df = pd.DataFrame({
+                            'Execution #': range(1, len(sell_executions) + 1),
+                            'Price': [f"${price:,.2f}" for price in sell_executions]
+                        })
+                        st.dataframe(sell_df, use_container_width=True)
+                        
+                        # Sell price statistics
+                        st.markdown("**Sell Price Stats**")
+                        st.metric("Highest Sell", f"${max(sell_executions):,.2f}")
+                        st.metric("Lowest Sell", f"${min(sell_executions):,.2f}")
+                        st.metric("Price Range", f"${max(sell_executions) - min(sell_executions):,.2f}")
 
         # Trade timeline
         if results_data['signals']['trades']:

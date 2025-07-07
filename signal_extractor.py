@@ -14,7 +14,14 @@ class SignalExtractor:
         self.signals = {
             'buy_signals': {'timestamp': [], 'price': [], 'reason': []},
             'sell_signals': {'timestamp': [], 'price': [], 'reason': []},
-            'trades': []
+            'trades': [],
+            'execution_prices': {
+                'buy_executions': [],
+                'sell_executions': [],
+                'average_buy_price': 0,
+                'average_sell_price': 0,
+                'total_executions': 0
+            }
         }
 
     def extract_from_backtest(self, cerebro: bt.Cerebro, results: List) -> Dict:
@@ -24,6 +31,9 @@ class SignalExtractor:
             return self.signals
 
         strategy = results[0]
+        
+        # Extract execution prices if available
+        self._extract_execution_prices(strategy)
 
         # Extract data safely
         dates = []
@@ -336,6 +346,38 @@ class SignalExtractor:
                 self.signals['sell_signals']['timestamp'].append(dates[-1])
                 self.signals['sell_signals']['price'].append(prices[-1])
                 self.signals['sell_signals']['reason'].append("Fallback sell signal")
+
+    def _extract_execution_prices(self, strategy) -> None:
+        """Extract execution prices from strategy order history"""
+        buy_executions = []
+        sell_executions = []
+        
+        # Try to get execution data from strategy if it has logged orders
+        if hasattr(strategy, '_execution_log'):
+            for execution in strategy._execution_log:
+                if execution['side'] == 'buy':
+                    buy_executions.append(execution['price'])
+                elif execution['side'] == 'sell':
+                    sell_executions.append(execution['price'])
+        else:
+            # Fallback: try to extract from signals if available
+            if hasattr(strategy, '_signals') and strategy._signals:
+                for signal in strategy._signals:
+                    if signal.get('type', '').lower() == 'buy':
+                        buy_executions.append(signal.get('price', 0))
+                    elif signal.get('type', '').lower() == 'sell':
+                        sell_executions.append(signal.get('price', 0))
+        
+        # Store execution prices
+        self.signals['execution_prices']['buy_executions'] = buy_executions
+        self.signals['execution_prices']['sell_executions'] = sell_executions
+        self.signals['execution_prices']['total_executions'] = len(buy_executions) + len(sell_executions)
+        
+        # Calculate averages
+        if buy_executions:
+            self.signals['execution_prices']['average_buy_price'] = sum(buy_executions) / len(buy_executions)
+        if sell_executions:
+            self.signals['execution_prices']['average_sell_price'] = sum(sell_executions) / len(sell_executions)
 
 
 class StrategySignalLogger:
