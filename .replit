@@ -11,3 +11,15 @@ run = ["sh", "-c", "streamlit run main.py"]
 [[ports]]
 localPort = 8501
 externalPort = 80
+
+[workflows]
+runButton = "Run Streamlit App"
+
+[[workflows.workflow]]
+name = "Run Streamlit App"
+author = 36239730
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "streamlit run app.py"
