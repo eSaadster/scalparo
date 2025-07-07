@@ -44,8 +44,8 @@ class DataFetcher:
                 },
                 'urls': {
                     'api': {
-                        'public': 'https://api.binance.us/api',
-                        'private': 'https://api.binance.us/api',
+                        'public': 'https://api.binance.us/api/v3',
+                        'private': 'https://api.binance.us/api/v3',
                     }
                 }
             })
