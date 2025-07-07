@@ -7,6 +7,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 import backtrader as bt
 from typing import Dict, Optional, Tuple
+import ccxt
 
 
 class CustomYahooData(bt.feeds.PandasData):
@@ -31,6 +32,61 @@ class DataFetcher:
         end_date = datetime.now()
         start_date = end_date - timedelta(days=7)
         return start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')
+    
+    @staticmethod
+    def fetch_binance_data(symbol: str, interval: str, start: str, end: str) -> pd.DataFrame:
+        """Fetch Bitcoin and Ethereum data from Binance"""
+        try:
+            exchange = ccxt.binance()
+            
+            # Convert symbol format for Binance (BTC-USD -> BTC/USDT)
+            binance_symbol = symbol.replace('-USD', '/USDT')
+            
+            # Convert dates to timestamps
+            since = exchange.parse8601(f"{start}T00:00:00Z")
+            until = exchange.parse8601(f"{end}T00:00:00Z")
+            
+            # Convert interval format for Binance
+            interval_map = {
+                '1m': '1m',
+                '5m': '5m', 
+                '15m': '15m',
+                '30m': '30m',
+                '1h': '1h',
+                '4h': '4h',
+                '1d': '1d',
+                '1wk': '1w',
+                '1mo': '1M'
+            }
+            binance_interval = interval_map.get(interval, '1h')
+            
+            print(f"Fetching {binance_symbol} data from Binance...")
+            
+            # Fetching the historical data
+            candles = exchange.fetch_ohlcv(binance_symbol, timeframe=binance_interval, since=since, limit=1000)
+            
+            if not candles:
+                print(f"No data returned from Binance for {binance_symbol}")
+                return pd.DataFrame()
+            
+            # Create DataFrame from the data received
+            df = pd.DataFrame(candles, columns=['timestamp', 'Open', 'High', 'Low', 'Close', 'Volume'])
+            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+            df.set_index('timestamp', inplace=True)
+            
+            # Filter data by end date
+            if until:
+                end_datetime = pd.to_datetime(end)
+                df = df[df.index <= end_datetime]
+            
+            print(f"✅ Binance data fetched successfully: {len(df)} records")
+            print(f"Date range: {df.index.min()} to {df.index.max()}")
+            
+            return df
+            
+        except Exception as e:
+            print(f"❌ Error fetching from Binance: {e}")
+            return pd.DataFrame()
     
     @staticmethod
     def fetch_yahoo_data(symbol: str, interval: str, start: str, end: str) -> pd.DataFrame:
@@ -93,9 +149,14 @@ class DataFetcher:
                 print(f"❌ Error fetching data for {attempt_symbol}: {e}")
                 continue
         
-        # If all attempts failed, try with a more reliable stock symbol as fallback
+        # If all attempts failed, try Binance for crypto symbols
         if symbol.startswith(('BTC', 'ETH', 'CRYPTO')):
-            print("Crypto symbols failed, trying with AAPL as fallback...")
+            print("Yahoo Finance crypto symbols failed, trying Binance...")
+            df = DataFetcher.fetch_binance_data(symbol, interval, start, end)
+            if not df.empty:
+                return df
+            
+            print("Binance also failed, trying with AAPL as fallback...")
             try:
                 df = yf.download('AAPL', start=start, end=end, interval=interval, progress=False)
                 if not df.empty:
