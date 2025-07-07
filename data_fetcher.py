@@ -155,22 +155,10 @@ class DataFetcher:
             df = DataFetcher.fetch_binance_data(symbol, interval, start, end)
             if not df.empty:
                 return df
-            
-            print("Binance also failed, trying with AAPL as fallback...")
-            try:
-                df = yf.download('AAPL', start=start, end=end, interval=interval, progress=False)
-                if not df.empty:
-                    if isinstance(df.columns, pd.MultiIndex):
-                        df.columns = df.columns.droplevel(1)
-                    df.dropna(inplace=True)
-                    df.index = pd.to_datetime(df.index)
-                    print(f"✅ Fallback data (AAPL) fetched: {len(df)} records")
-                    return df
-            except Exception as e:
-                print(f"❌ Even fallback failed: {e}")
         
-        print("❌ All data fetching attempts failed")
+        print("❌ All external data sources failed (likely due to network restrictions)")
         print("🔄 Generating sample data for testing...")
+        print("💡 Note: This is common in restricted environments. Sample data will be used for demonstration.")
         return DataFetcher.generate_sample_data(start, end, interval)
     
     @staticmethod
@@ -210,9 +198,9 @@ class DataFetcher:
         
         # Generate date range based on interval
         if interval in ['1m', '5m', '15m', '30m']:
-            freq = interval.replace('m', 'T')  # T for minutes
+            freq = interval.replace('m', 'min')  # min for minutes
         elif interval in ['1h', '4h']:
-            freq = interval.replace('h', 'H')  # H for hours
+            freq = interval.replace('h', 'h')  # h for hours (lowercase)
         elif interval in ['1d']:
             freq = 'D'
         elif interval in ['1wk']:
@@ -220,7 +208,7 @@ class DataFetcher:
         elif interval in ['1mo']:
             freq = 'M'
         else:
-            freq = 'H'  # Default to hourly
+            freq = 'h'  # Default to hourly (lowercase)
         
         # Create date range
         dates = pd.date_range(start=start_date, end=end_date, freq=freq)
