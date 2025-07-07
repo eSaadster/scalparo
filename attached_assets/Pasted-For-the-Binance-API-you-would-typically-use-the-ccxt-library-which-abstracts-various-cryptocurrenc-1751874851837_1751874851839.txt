@@ -1,0 +1,46 @@
+For the Binance API, you would typically use the ccxt library, which abstracts various cryptocurrency exchanges including Binance. Below is an example of how you could modify your DataFetcher class to use Binance instead of Yahoo Finance:
+
+First, ensure you install the ccxt library if it's not already available in your environment:
+
+pip install ccxt
+Then, update your DataFetcher class in data_fetcher.py to add a method for fetching data from Binance:
+
+import ccxt  # Make sure to import ccxt
+class DataFetcher:
+    """Handles data fetching and preprocessing"""
+    # Other methods...
+    @staticmethod
+    def fetch_binance_data(symbol: str, interval: str, start: str, end: str) -> pd.DataFrame:
+        """Fetch Bitcoin and Ethereum data from Binance"""
+        exchange = ccxt.binance()
+        # Convert dates to timestamps
+        since = exchange.parse8601(f"{start}T00:00:00Z")
+        until = exchange.parse8601(f"{end}T00:00:00Z")
+        # Fetching the historical data
+        candles = exchange.fetch_ohlcv(symbol, timeframe=interval, since=since, limit=1000)
+        # Create DataFrame from the data received
+        df = pd.DataFrame(candles, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+        df.set_index('timestamp', inplace=True)
+        return df
+    # Update your existing fetch method to use the new Binance data fetching method
+    @staticmethod
+    def fetch_yahoo_data(symbol: str, interval: str, start: str, end: str) -> pd.DataFrame:
+        """Fetch data intended from Yahoo Finance with error handling and fallbacks,
+        You can call fetch_binance_data as fallbacks if necessary. 
+        """
+        # Your previous implementation
+        # then, you can try fetching from Binance
+        try:
+            df = DataFetcher.fetch_binance_data(symbol, interval, start, end)
+            if not df.empty:
+                return df
+        except Exception as e:
+            print(f"Error fetching from Binance: {e}")
+        print("❌ All data fetching attempts failed")
+        print("🔄 Generating sample data for testing...")
+        return DataFetcher.generate_sample_data(start, end, interval)
+Summary
+This code fetches OHLCV (Open, High, Low, Close, Volume) data from Binance using their API.
+Make sure to adjust the start and end date formats to be compatible with the Binance API.
+You may also want to modify the logic to handle different trading pairs, such as BTC or ETH.

@@ -12,6 +12,10 @@ run = ["sh", "-c", "streamlit run main.py"]
 localPort = 8501
 externalPort = 80
 
+[[ports]]
+localPort = 8502
+externalPort = 3000
+
 [workflows]
 runButton = "Run Streamlit App"
 
