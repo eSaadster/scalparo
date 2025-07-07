@@ -156,10 +156,10 @@ class DataFetcher:
             if not df.empty:
                 return df
         
+        # All data sources failed - return empty DataFrame
         print("❌ All external data sources failed (likely due to network restrictions)")
-        print("🔄 Generating sample data for testing...")
-        print("💡 Note: This is common in restricted environments. Sample data will be used for demonstration.")
-        return DataFetcher.generate_sample_data(start, end, interval)
+        print("🚫 Unable to fetch market data. Please check your internet connection or try again later.")
+        return pd.DataFrame()
     
     @staticmethod
     def get_user_config() -> Optional[Dict]:
@@ -187,77 +187,4 @@ class DataFetcher:
         required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
         return all(col in df.columns for col in required_columns)
     
-    @staticmethod
-    def generate_sample_data(start: str, end: str, interval: str) -> pd.DataFrame:
-        """Generate sample data for testing when Yahoo Finance fails"""
-        import numpy as np
-        
-        # Parse start and end dates
-        start_date = pd.to_datetime(start)
-        end_date = pd.to_datetime(end)
-        
-        # Generate date range based on interval
-        if interval in ['1m', '5m', '15m', '30m']:
-            freq = interval.replace('m', 'min')  # min for minutes
-        elif interval in ['1h', '4h']:
-            freq = interval.replace('h', 'h')  # h for hours (lowercase)
-        elif interval in ['1d']:
-            freq = 'D'
-        elif interval in ['1wk']:
-            freq = 'W'
-        elif interval in ['1mo']:
-            freq = 'M'
-        else:
-            freq = 'h'  # Default to hourly (lowercase)
-        
-        # Create date range
-        dates = pd.date_range(start=start_date, end=end_date, freq=freq)
-        
-        if len(dates) == 0:
-            # Fallback to daily data if no dates generated
-            dates = pd.date_range(start=start_date, end=end_date, freq='D')
-        
-        # Generate realistic price data using random walk
-        np.random.seed(42)  # For reproducible data
-        n_periods = len(dates)
-        
-        # Starting price
-        initial_price = 100.0
-        
-        # Generate returns (small random changes)
-        returns = np.random.normal(0.001, 0.02, n_periods)  # Mean 0.1%, std 2%
-        
-        # Calculate prices using cumulative returns
-        prices = initial_price * np.exp(np.cumsum(returns))
-        
-        # Generate OHLC data
-        opens = prices
-        
-        # High and Low with some randomness
-        highs = prices * (1 + np.abs(np.random.normal(0, 0.01, n_periods)))
-        lows = prices * (1 - np.abs(np.random.normal(0, 0.01, n_periods)))
-        
-        # Close prices (slightly different from opens)
-        closes = prices * (1 + np.random.normal(0, 0.005, n_periods))
-        
-        # Volume (random but realistic)
-        volumes = np.random.randint(1000, 10000, n_periods)
-        
-        # Create DataFrame
-        df = pd.DataFrame({
-            'Open': opens,
-            'High': highs,
-            'Low': lows,
-            'Close': closes,
-            'Volume': volumes
-        }, index=dates)
-        
-        # Ensure High >= Low and contains Open/Close
-        df['High'] = df[['Open', 'High', 'Close']].max(axis=1)
-        df['Low'] = df[['Open', 'Low', 'Close']].min(axis=1)
-        
-        print(f"✅ Generated sample data: {len(df)} records")
-        print(f"Date range: {df.index.min()} to {df.index.max()}")
-        print(f"Price range: ${df['Close'].min():.2f} - ${df['Close'].max():.2f}")
-        
-        return df
+    
