@@ -5,7 +5,7 @@ import backtrader as bt
 from strategies import BaseStrategy
 
 
-class Test 1Strategy(BaseStrategy):
+class Test1Strategy(BaseStrategy):
     """
     Custom Test 1 trading strategy
     
