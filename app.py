@@ -502,11 +502,11 @@ if run_backtest_btn:
                 st.error("• API service unavailability") 
                 st.error("• Invalid symbol or date range")
                 st.info("💡 Please check your internet connection and try again later.")
-                return
+                st.stop()
 
             if not DataFetcher.validate_data(data):
                 st.error("❌ Invalid data received. Please try different parameters.")
-                return
+                st.stop()
 
             strategy_class = st.session_state.strategy_manager.get_strategy(strategy_name)
             cerebro, results = run_backtest(config, strategy_class, strategy_params)
