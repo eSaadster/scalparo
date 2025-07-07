@@ -16,6 +16,14 @@ from signal_extractor import SignalExtractor
 from performance_analytics import PerformanceAnalyzer
 from benchmark_calculator import BenchmarkCalculator
 
+# Page configuration MUST be first
+st.set_page_config(
+    page_title="Scalparo - Professional Trading Platform",
+    page_icon="📈",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 # Custom CSS for modern SaaS trading interface
 st.markdown("""
 <style>
@@ -329,13 +337,6 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
-
-st.set_page_config(
-    page_title="Scalparo - Professional Trading Platform",
-    page_icon="📈",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # Initialize session state
 if 'strategy_manager' not in st.session_state:
