@@ -39,18 +39,26 @@ class DataFetcher:
         try:
             exchange = ccxt.binance({
                 'enableRateLimit': True,
+                'sandbox': False,
                 'options': {
                     'adjustForTimeDifference': True,
+                    'defaultType': 'spot',  # Force spot trading only
                 },
                 'urls': {
+                    'logo': 'https://user-images.githubusercontent.com/1294454/29604020-d5483cdc-87ee-11e7-94c7-d1a8d9169293.jpg',
                     'api': {
+                        'web': 'https://api.binance.us',
+                        'wapi': 'https://api.binance.us/wapi',
+                        'sapi': 'https://api.binance.us/sapi',
+                        'sapiV2': 'https://api.binance.us/sapi/v2',
+                        'sapiV3': 'https://api.binance.us/sapi/v3',
                         'public': 'https://api.binance.us/api/v3',
                         'private': 'https://api.binance.us/api/v3',
                     },
-                    'fapiPublic': 'https://api.binance.us/fapi/v1',
-                    'fapiPrivate': 'https://api.binance.us/fapi/v1',
-                    'dapiPublic': 'https://api.binance.us/dapi/v1',
-                    'dapiPrivate': 'https://api.binance.us/dapi/v1'
+                    'www': 'https://www.binance.us',
+                    'referral': 'https://www.binance.us/?ref=35005581',
+                    'doc': 'https://github.com/binance-us/binance-official-api-docs',
+                    'fees': 'https://www.binance.us/en/fee/schedule',
                 },
                 'hostname': 'api.binance.us'
             })
