@@ -46,8 +46,13 @@ class DataFetcher:
                     'api': {
                         'public': 'https://api.binance.us/api/v3',
                         'private': 'https://api.binance.us/api/v3',
-                    }
-                }
+                    },
+                    'fapiPublic': 'https://api.binance.us/fapi/v1',
+                    'fapiPrivate': 'https://api.binance.us/fapi/v1',
+                    'dapiPublic': 'https://api.binance.us/dapi/v1',
+                    'dapiPrivate': 'https://api.binance.us/dapi/v1'
+                },
+                'hostname': 'api.binance.us'
             })
             
             # Convert symbol format for Binance (BTC-USD -> BTC/USDT)
