@@ -35,9 +35,20 @@ class DataFetcher:
     
     @staticmethod
     def fetch_binance_data(symbol: str, interval: str, start: str, end: str) -> pd.DataFrame:
-        """Fetch Bitcoin and Ethereum data from Binance"""
+        """Fetch Bitcoin and Ethereum data from Binance US"""
         try:
-            exchange = ccxt.binance()
+            exchange = ccxt.binance({
+                'enableRateLimit': True,
+                'options': {
+                    'adjustForTimeDifference': True,
+                },
+                'urls': {
+                    'api': {
+                        'public': 'https://api.binance.us/api',
+                        'private': 'https://api.binance.us/api',
+                    }
+                }
+            })
             
             # Convert symbol format for Binance (BTC-USD -> BTC/USDT)
             binance_symbol = symbol.replace('-USD', '/USDT')
@@ -60,7 +71,7 @@ class DataFetcher:
             }
             binance_interval = interval_map.get(interval, '1h')
             
-            print(f"Fetching {binance_symbol} data from Binance...")
+            print(f"Fetching {binance_symbol} data from Binance US...")
             
             # Fetching the historical data
             candles = exchange.fetch_ohlcv(binance_symbol, timeframe=binance_interval, since=since, limit=1000)
