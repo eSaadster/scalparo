@@ -32,25 +32,26 @@ st.markdown("""
     
     /* Global theme variables */
     :root {
-        --primary-bg: #0B0E11;
-        --secondary-bg: #151922;
-        --card-bg: #1E2329;
-        --accent-bg: #262932;
-        --border-color: #2B3139;
-        --text-primary: #EAECEF;
-        --text-secondary: #B7BDC6;
-        --text-muted: #848E9C;
-        --accent-color: #F0B90B;
-        --success-color: #02C076;
-        --danger-color: #F84960;
-        --warning-color: #FF8F00;
-        --info-color: #1890FF;
+        --primary-bg: #FFFFFF;
+        --secondary-bg: #F8F9FA;
+        --card-bg: #FFFFFF;
+        --accent-bg: #F1F3F4;
+        --border-color: #E1E4E8;
+        --text-primary: #24292E;
+        --text-secondary: #586069;
+        --text-muted: #959DA5;
+        --accent-color: #0366D6;
+        --success-color: #28A745;
+        --danger-color: #D73A49;
+        --warning-color: #F66A0A;
+        --info-color: #0366D6;
     }
     
     /* Main app styling */
     .stApp {
-        background: linear-gradient(135deg, var(--primary-bg) 0%, #0F1419 100%);
+        background: linear-gradient(135deg, var(--primary-bg) 0%, #F5F7FA 100%);
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        color: var(--text-primary);
     }
     
     /* Hide default streamlit elements */
@@ -67,13 +68,13 @@ st.markdown("""
         border: 1px solid var(--border-color);
         margin-bottom: 2rem;
         text-align: center;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     }
     
     .main-title {
         font-size: 2.5rem;
         font-weight: 700;
-        background: linear-gradient(45deg, var(--accent-color), #FCD434);
+        background: linear-gradient(45deg, var(--accent-color), #0052CC);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         margin-bottom: 0.5rem;
@@ -89,6 +90,11 @@ st.markdown("""
     .css-1d391kg {
         background: var(--secondary-bg);
         border-right: 2px solid var(--border-color);
+    }
+    
+    /* Streamlit sidebar content */
+    .css-1lcbmhc {
+        background: var(--secondary-bg);
     }
     
     .sidebar-section {
@@ -122,7 +128,7 @@ st.markdown("""
     .metric-card:hover {
         border-color: var(--accent-color);
         transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(240, 185, 11, 0.15);
+        box-shadow: 0 8px 25px rgba(3, 102, 214, 0.15);
     }
     
     .metric-value {
@@ -185,20 +191,20 @@ st.markdown("""
     
     /* Buttons */
     .stButton button {
-        background: linear-gradient(45deg, var(--accent-color), #FCD434);
-        color: var(--primary-bg);
+        background: linear-gradient(45deg, var(--accent-color), #0052CC);
+        color: white;
         border: none;
         border-radius: 8px;
         padding: 0.75rem 2rem;
         font-weight: 600;
         font-size: 1rem;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(240, 185, 11, 0.3);
+        box-shadow: 0 4px 15px rgba(3, 102, 214, 0.3);
     }
     
     .stButton button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(240, 185, 11, 0.4);
+        box-shadow: 0 6px 20px rgba(3, 102, 214, 0.4);
     }
     
     /* Status indicators */
@@ -237,6 +243,7 @@ st.markdown("""
         border-radius: 12px;
         border: 1px solid var(--border-color);
         margin: 2rem 0;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     }
     
     /* Signal badges */
@@ -667,9 +674,9 @@ if st.session_state.backtest_results:
                 results_data['data'], chart_signals
             )
             candlestick_fig.update_layout(
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                font=dict(color='#EAECEF')
+                paper_bgcolor='white',
+                plot_bgcolor='white',
+                font=dict(color='#24292E')
             )
             st.plotly_chart(candlestick_fig, use_container_width=True)
         except Exception as e:
@@ -703,9 +710,9 @@ if st.session_state.backtest_results:
                 # Price distribution
                 histogram_fig = st.session_state.chart_generator.create_price_histogram(results_data['data'])
                 histogram_fig.update_layout(
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color='#EAECEF')
+                    paper_bgcolor='white',
+                    plot_bgcolor='white',
+                    font=dict(color='#24292E')
                 )
                 st.plotly_chart(histogram_fig, use_container_width=True)
                 
@@ -715,9 +722,9 @@ if st.session_state.backtest_results:
                         performance_analysis['returns']
                     )
                     drawdown_fig.update_layout(
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        plot_bgcolor='rgba(0,0,0,0)',
-                        font=dict(color='#EAECEF')
+                        paper_bgcolor='white',
+                        plot_bgcolor='white',
+                        font=dict(color='#24292E')
                     )
                     st.plotly_chart(drawdown_fig, use_container_width=True)
             except Exception as e:
@@ -769,9 +776,9 @@ if st.session_state.backtest_results:
                     results_data['signals']['trades']
                 )
                 trade_timeline_fig.update_layout(
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color='#EAECEF')
+                    paper_bgcolor='white',
+                    plot_bgcolor='white',
+                    font=dict(color='#24292E')
                 )
                 st.plotly_chart(trade_timeline_fig, use_container_width=True)
             except Exception as e:
