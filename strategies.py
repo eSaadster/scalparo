@@ -406,13 +406,86 @@ class FibonacciRetracementStrategy(BaseStrategy):
             }
         }
 
+
+class SimpleStrategy(BaseStrategy):
+    """Simple trend following strategy based on ATR and weighted price"""
+
+    params = (
+        ('trade_sizes', (150, 200, 300)),
+        ('max_allocation', 1000),
+        ('profit_target_percent', 0.5),
+        ('atr_period', 14),
+        ('weighted_period', 24),
+        ('printlog', True),
+    )
+
+    def _initialize_indicators(self):
+        """Initialize ATR and weighted average price indicators"""
+        self.atr = bt.indicators.ATR(self.data, period=self.params.atr_period)
+        weighted_close = (self.data.high + self.data.low + self.data.close * 2) / 4
+        self.weighted_avg = bt.indicators.SimpleMovingAverage(
+            weighted_close, period=self.params.weighted_period
+        )
+
+        self.lots = []  # track individual entry prices and sizes
+        self.allocated = 0.0
+
+    def should_buy(self) -> bool:  # not used but required
+        return False
+
+    def should_sell(self) -> bool:  # not used but required
+        return False
+
+    def get_buy_reason(self) -> str:
+        return ""
+
+    def get_sell_reason(self) -> str:
+        return ""
+
+    def _pick_chunk_size(self) -> float:
+        remaining = self.params.max_allocation - self.allocated
+        sizes = [s for s in self.params.trade_sizes if s <= remaining]
+        return sizes[0] if sizes else 0
+
+    def next(self):
+        if self.order:
+            return
+
+        price = self.data.close[0]
+
+        # Check sell conditions for each open lot
+        for lot in list(self.lots):
+            target = lot['entry'] * (1 + self.params.profit_target_percent / 100)
+            if price >= target:
+                self.log_sell_signal(price, 'Profit target hit')
+                self.log(f'SELL CREATE: Price: {price:.2f}')
+                self.order = self.sell(size=lot['size'])
+                self.lots.remove(lot)
+                self.allocated -= lot['entry'] * lot['size']
+
+        # Buy logic
+        downtrend_threshold = self.weighted_avg[0] - self.atr[0]
+        if (self.allocated < self.params.max_allocation and
+                price >= downtrend_threshold):
+            trade_value = self._pick_chunk_size()
+            if trade_value > 0:
+                size = trade_value / price
+                self.log_buy_signal(price, 'Price above downtrend threshold')
+                self.log(
+                    f'BUY CREATE: Price: {price:.2f}, Value: {trade_value:.2f}'
+                )
+                self.order = self.buy(size=size)
+                self.lots.append({'entry': price, 'size': size})
+                self.allocated += trade_value
+
 # Strategy registry for easy access
 STRATEGIES = {
     'SMA Crossover': SMAStrategy,
     'RSI': RSIStrategy,
     'MACD': MACDStrategy,
     'Fibonacci Retracement': FibonacciRetracementStrategy,
-    'Bollinger Bands': BollingerBandsStrategy
+    'Bollinger Bands': BollingerBandsStrategy,
+    'Simple': SimpleStrategy
 }
 
 
