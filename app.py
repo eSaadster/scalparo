@@ -6,6 +6,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import json
+from typing import Tuple
 from strategy_manager import StrategyManager
 from data_fetcher import DataFetcher
 from main import run_backtest
@@ -14,6 +15,26 @@ from chart_components import ChartGenerator
 from signal_extractor import SignalExtractor
 from performance_analytics import PerformanceAnalyzer
 from benchmark_calculator import BenchmarkCalculator
+
+
+def compute_rsi(series: pd.Series, period: int = 14) -> pd.Series:
+    """Simple RSI calculation"""
+    delta = series.diff()
+    up = delta.clip(lower=0)
+    down = -delta.clip(upper=0)
+    ma_up = up.rolling(window=period).mean()
+    ma_down = down.rolling(window=period).mean()
+    rs = ma_up / ma_down
+    return 100 - (100 / (1 + rs))
+
+
+def compute_macd(series: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9) -> Tuple[pd.Series, pd.Series]:
+    """Return MACD and signal lines"""
+    ema_fast = series.ewm(span=fast, adjust=False).mean()
+    ema_slow = series.ewm(span=slow, adjust=False).mean()
+    macd = ema_fast - ema_slow
+    macd_signal = macd.ewm(span=signal, adjust=False).mean()
+    return macd, macd_signal
 
 # Page configuration MUST be first
 st.set_page_config(
@@ -334,6 +355,11 @@ st.markdown("""
         border-radius: 50%;
         background: var(--success-color);
         animation: pulse 2s infinite;
+    }
+
+    /* Crosshair cursor for chart */
+    .plotly-graph-div:hover {
+        cursor: crosshair;
     }
 
     @keyframes pulse {
@@ -725,15 +751,27 @@ if st.session_state.backtest_results:
         # Create chart
         try:
             chart_signals = signals if show_signals else None
+            close_series = results_data['data']['Close']
+            rsi = compute_rsi(close_series)
+            macd, macd_sig = compute_macd(close_series)
+            indicators = {
+                'RSI': rsi,
+                'MACD': macd,
+                'MACD Signal': macd_sig,
+            }
             candlestick_fig = st.session_state.chart_generator.create_candlestick_chart(
-                results_data['data'], chart_signals
+                results_data['data'], chart_signals, indicators
             )
             candlestick_fig.update_layout(
                 paper_bgcolor='white',
                 plot_bgcolor='white',
                 font=dict(color='#24292E')
             )
-            st.plotly_chart(candlestick_fig, use_container_width=True)
+            st.plotly_chart(
+                candlestick_fig,
+                use_container_width=True,
+                config={"displaylogo": False, "scrollZoom": True},
+            )
         except Exception as e:
             st.error(f"Chart error: {str(e)}")
 

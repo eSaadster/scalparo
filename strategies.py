@@ -408,10 +408,11 @@ class FibonacciRetracementStrategy(BaseStrategy):
 
 
 class SimpleStrategy(BaseStrategy):
-    """Simple trend following strategy based on ATR and weighted price"""
+    """Zone based trend following strategy"""
 
     params = (
-        ('trade_sizes', (150, 200, 300)),
+        # Chunk sizes for zones A, B and C respectively
+        ('chunk_sizes', (150, 100, 50)),
         ('max_allocation', 1000),
         ('profit_target_percent', 0.5),
         ('atr_period', 14),
@@ -429,6 +430,8 @@ class SimpleStrategy(BaseStrategy):
 
         self.lots = []  # track individual entry prices and sizes
         self.allocated = 0.0
+        self.last_buy_time = None
+        self.last_buy_zone = None
 
     def should_buy(self) -> bool:  # not used but required
         return False
@@ -442,10 +445,15 @@ class SimpleStrategy(BaseStrategy):
     def get_sell_reason(self) -> str:
         return ""
 
-    def _pick_chunk_size(self) -> float:
+    def _pick_chunk_size(self, zone: str) -> float:
+        """Return the appropriate trade chunk based on the current zone"""
+        mapping = {'A': 0, 'B': 1, 'C': 2}
+        idx = mapping.get(zone)
+        if idx is None:
+            return 0
         remaining = self.params.max_allocation - self.allocated
-        sizes = [s for s in self.params.trade_sizes if s <= remaining]
-        return sizes[0] if sizes else 0
+        size = self.params.chunk_sizes[idx]
+        return size if size <= remaining else 0
 
     def next(self):
         if self.order:
@@ -463,20 +471,56 @@ class SimpleStrategy(BaseStrategy):
                 self.lots.remove(lot)
                 self.allocated -= lot['entry'] * lot['size']
 
-        # Buy logic
-        downtrend_threshold = self.weighted_avg[0] - self.atr[0]
-        if (self.allocated < self.params.max_allocation and
-                price >= downtrend_threshold):
-            trade_value = self._pick_chunk_size()
+        avg_price = self.weighted_avg[0]
+
+        # Determine zone based on price vs weighted average
+        if price >= avg_price * 0.99:
+            zone = 'A'
+        elif price >= avg_price * 0.97:
+            zone = 'B'
+        elif price >= avg_price * 0.95:
+            zone = 'C'
+        else:
+            zone = 'D'
+
+        dt = self.datas[0].datetime.datetime(0)
+
+        # Cooldown logic
+        cooldown_map = {'A': 1, 'B': 3, 'C': 6}
+        cooldown = cooldown_map.get(zone, 0)
+        if self.last_buy_time is not None and cooldown > 0:
+            elapsed = (dt - self.last_buy_time).total_seconds() / 3600
+            if elapsed < cooldown:
+                return
+
+        # Avoid multiple buys in same zone
+        if self.last_buy_zone == zone and zone != 'D':
+            return
+
+        # Additional check for zone C bounce
+        if zone == 'C':
+            period = self.params.atr_period
+            lookback = min(period, len(self))
+            lows = [self.data.low[-i] for i in range(lookback)]
+            min_low = min(lows)
+            bounce = (price - min_low) / min_low * 100
+            if bounce < 0.5:
+                return
+
+        if zone != 'D':
+            trade_value = self._pick_chunk_size(zone)
             if trade_value > 0:
                 size = trade_value / price
-                self.log_buy_signal(price, 'Price above downtrend threshold')
+                self.log_buy_signal(price, f'Zone {zone} entry')
                 self.log(
-                    f'BUY CREATE: Price: {price:.2f}, Value: {trade_value:.2f}'
+                    f'BUY CREATE: Zone {zone} Price: {price:.2f}, Value: {trade_value:.2f}'
                 )
                 self.order = self.buy(size=size)
                 self.lots.append({'entry': price, 'size': size})
                 self.allocated += trade_value
+
+                self.last_buy_time = dt
+                self.last_buy_zone = zone
 
 # Strategy registry for easy access
 STRATEGIES = {

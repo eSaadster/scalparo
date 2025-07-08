@@ -12,27 +12,40 @@ class ChartGenerator:
     """Generates interactive charts for trading analysis"""
     
     def __init__(self):
+        # Updated color palette for better visual fidelity
         self.colors = {
-            'bullish': '#00ff88',
-            'bearish': '#ff4444', 
-            'buy_signal': '#00ff00',
-            'sell_signal': '#ff0000',
-            'volume': '#4CAF50',
+            'bullish': '#26a69a',
+            'bearish': '#ef5350',
+            'buy_signal': '#2ecc71',
+            'sell_signal': '#e74c3c',
+            'volume': '#338cf5',
             'strategy': '#2196F3',
             'benchmark': '#FF9800'
         }
     
-    def create_candlestick_chart(self, data: pd.DataFrame, signals: Optional[Dict] = None, 
-                               indicators: Optional[Dict] = None) -> go.Figure:
-        """Create interactive candlestick chart with signals and indicators"""
-        
-        # Create subplots: main chart and volume
+    def create_candlestick_chart(
+        self,
+        data: pd.DataFrame,
+        signals: Optional[Dict] = None,
+        indicators: Optional[Dict[str, pd.Series]] = None
+    ) -> go.Figure:
+        """Create interactive candlestick chart with advanced features"""
+
+        indicator_names = list(indicators.keys()) if indicators else []
+        indicator_count = len(indicator_names)
+
+        # Build subplots: price, indicator panels, volume
+        rows = 2 + indicator_count
+        row_heights = [0.55] + [0.15] * indicator_count + [0.3]
+        titles = ['Price'] + indicator_names + ['Volume']
+
         fig = make_subplots(
-            rows=2, cols=1,
+            rows=rows,
+            cols=1,
             shared_xaxes=True,
-            vertical_spacing=0.1,
-            subplot_titles=('Price Chart', 'Volume'),
-            row_heights=[0.7, 0.3]
+            vertical_spacing=0.02,
+            subplot_titles=tuple(titles),
+            row_heights=row_heights
         )
         
         # Add candlestick chart
@@ -45,7 +58,8 @@ class ChartGenerator:
                 close=data['Close'],
                 name='Price',
                 increasing_line_color=self.colors['bullish'],
-                decreasing_line_color=self.colors['bearish']
+                decreasing_line_color=self.colors['bearish'],
+                showlegend=False,
             ),
             row=1, col=1
         )
@@ -57,9 +71,10 @@ class ChartGenerator:
                 y=data['Volume'],
                 name='Volume',
                 marker_color=self.colors['volume'],
-                opacity=0.6
+                opacity=0.6,
+                showlegend=False,
             ),
-            row=2, col=1
+            row=rows, col=1
         )
         
         # Add buy/sell signals if provided
@@ -70,68 +85,133 @@ class ChartGenerator:
                     go.Scatter(
                         x=buy_signals['timestamp'],
                         y=buy_signals['price'],
-                        mode='markers',
+                        mode='markers+text',
                         marker=dict(
                             symbol='triangle-up',
                             size=12,
-                            color=self.colors['buy_signal']
+                            color=self.colors['buy_signal'],
+                            line=dict(width=1, color='black'),
                         ),
+                        text=[f"BUY\n${p:.2f}" for p in buy_signals['price']],
+                        textposition='bottom center',
                         name='Buy Signal',
-                        hovertemplate='<b>Buy Signal</b><br>' +
-                                    'Time: %{x}<br>' +
-                                    'Price: $%{y:.2f}<extra></extra>'
+                        hovertemplate='<b>Buy</b><br>Time: %{x}<br>Price: $%{y:.2f}<extra></extra>',
+                        showlegend=False,
                     ),
                     row=1, col=1
                 )
-            
+
             if 'sell_signals' in signals:
                 sell_signals = signals['sell_signals']
                 fig.add_trace(
                     go.Scatter(
                         x=sell_signals['timestamp'],
                         y=sell_signals['price'],
-                        mode='markers',
+                        mode='markers+text',
                         marker=dict(
                             symbol='triangle-down',
                             size=12,
-                            color=self.colors['sell_signal']
+                            color=self.colors['sell_signal'],
+                            line=dict(width=1, color='black'),
                         ),
+                        text=[f"SELL\n${p:.2f}" for p in sell_signals['price']],
+                        textposition='top center',
                         name='Sell Signal',
-                        hovertemplate='<b>Sell Signal</b><br>' +
-                                    'Time: %{x}<br>' +
-                                    'Price: $%{y:.2f}<extra></extra>'
+                        hovertemplate='<b>Sell</b><br>Time: %{x}<br>Price: $%{y:.2f}<extra></extra>',
+                        showlegend=False,
                     ),
                     row=1, col=1
                 )
         
         # Add technical indicators if provided
         if indicators:
-            for indicator_name, indicator_data in indicators.items():
+            for i, (indicator_name, indicator_data) in enumerate(indicators.items(), start=2):
                 fig.add_trace(
                     go.Scatter(
                         x=indicator_data.index,
                         y=indicator_data.values,
                         mode='lines',
                         name=indicator_name,
-                        line=dict(width=2),
-                        opacity=0.8
+                        line=dict(width=1.5),
+                        opacity=0.8,
+                        showlegend=False,
                     ),
-                    row=1, col=1
+                    row=i, col=1
                 )
+
+                # Annotate last value
+                fig.add_annotation(
+                    x=indicator_data.index[-1],
+                    y=indicator_data.values[-1],
+                    text=f"{indicator_data.values[-1]:.2f}",
+                    showarrow=False,
+                    xref=f"x{i}",
+                    yref=f"y{i}",
+                    xanchor="left",
+                )
+
+                # Threshold lines for RSI
+                if indicator_name.upper() == 'RSI':
+                    fig.add_hline(y=70, line_dash='dash', line_color='orange', row=i, col=1)
+                    fig.add_hline(y=30, line_dash='dash', line_color='orange', row=i, col=1)
         
-        # Update layout
+        # Determine last price information for header
+        last_close = data['Close'].iloc[-1]
+        prev_close = data['Close'].iloc[-2] if len(data) > 1 else last_close
+        change = last_close - prev_close
+        change_pct = (change / prev_close) * 100 if prev_close else 0
+        price_color = self.colors['bullish'] if change >= 0 else self.colors['bearish']
+
+        header_html = (
+            f"<span style='color:{price_color};font-size:20px;'>$"
+            f"{last_close:.2f} ({change:+.2f} / {change_pct:+.2f}%)</span>"
+            f"<span style='margin-left:20px;font-size:12px;'>"
+            f"O:{data['Open'].iloc[-1]:.2f} H:{data['High'].iloc[-1]:.2f} "
+            f"L:{data['Low'].iloc[-1]:.2f} V:{data['Volume'].iloc[-1]:,.0f}""</span>"
+        )
+
         fig.update_layout(
-            title='Interactive Trading Chart',
+            title=header_html,
             xaxis_rangeslider_visible=False,
             height=700,
-            showlegend=True,
-            hovermode='x unified'
+            hovermode='x unified',
+            template='plotly_white',
+            dragmode='pan',
         )
-        
-        # Update axes
-        fig.update_xaxes(title_text="Time", row=2, col=1)
+
+        fig.update_xaxes(
+            title_text="Time",
+            showgrid=True,
+            gridcolor="#E1E4E8",
+            showspikes=True,
+            spikemode="across",
+            spikesnap="cursor",
+            spikecolor="grey",
+            spikethickness=1,
+        )
+
+        fig.update_yaxes(showgrid=True, gridcolor="#E1E4E8")
+
+        # Set axis titles for main panels
         fig.update_yaxes(title_text="Price ($)", row=1, col=1)
-        fig.update_yaxes(title_text="Volume", row=2, col=1)
+        fig.update_yaxes(title_text="Volume", row=rows, col=1)
+
+        # Add time range selector buttons
+        fig.update_layout(
+            xaxis=dict(
+                rangeselector=dict(
+                    buttons=[
+                        dict(count=1, label='1D', step='day', stepmode='backward'),
+                        dict(count=5, label='5D', step='day', stepmode='backward'),
+                        dict(count=1, label='1M', step='month', stepmode='backward'),
+                        dict(count=3, label='3M', step='month', stepmode='backward'),
+                        dict(count=6, label='6M', step='month', stepmode='backward'),
+                        dict(step='all', label='All')
+                    ]
+                ),
+                rangeslider=dict(visible=False)
+            )
+        )
         
         return fig
     
