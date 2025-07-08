@@ -86,6 +86,7 @@ class MyCustomStrategy(BaseStrategy):
 3. **MACD**: Trade on MACD/signal line crossovers
 4. **Bollinger Bands**: Trade when price touches bands
 5. **Fibonacci Retracement**: Trade on bounces from key Fibonacci levels
+6. **Simple**: ATR-based entries with fixed profit target
 
 ## Performance Metrics
 
