@@ -85,6 +85,7 @@ class MyCustomStrategy(BaseStrategy):
 2. **RSI**: Trade on overbought/oversold conditions
 3. **MACD**: Trade on MACD/signal line crossovers
 4. **Bollinger Bands**: Trade when price touches bands
+5. **Fibonacci Retracement**: Trade on bounces from key Fibonacci levels
 
 ## Performance Metrics
 

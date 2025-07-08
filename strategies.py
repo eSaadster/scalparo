@@ -347,12 +347,71 @@ class BollingerBandsStrategy(BaseStrategy):
             }
         }
 
+class FibonacciRetracementStrategy(BaseStrategy):
+    """Fibonacci Retracement Trading Strategy"""
+
+    params = (
+        ('lookback', 50),
+        ('printlog', True),
+    )
+
+    def _initialize_indicators(self):
+        """Initialize Fibonacci levels"""
+        self.highest = bt.indicators.Highest(self.data.high, period=self.params.lookback)
+        self.lowest = bt.indicators.Lowest(self.data.low, period=self.params.lookback)
+        diff = self.highest - self.lowest
+        self.level382 = self.highest - diff * 0.382
+        self.level618 = self.highest - diff * 0.618
+
+    def _cross_above(self, level) -> bool:
+        return self.data.close[-1] < level[-1] and self.data.close[0] > level[0]
+
+    def _cross_below(self, level) -> bool:
+        return self.data.close[-1] > level[-1] and self.data.close[0] < level[0]
+
+    def should_buy(self) -> bool:
+        """Buy when price crosses above 38.2% or 61.8% level"""
+        return self._cross_above(self.level382) or self._cross_above(self.level618)
+
+    def should_sell(self) -> bool:
+        """Sell when price crosses below 38.2% or 61.8% level"""
+        return self._cross_below(self.level382) or self._cross_below(self.level618)
+
+    def get_buy_reason(self) -> str:
+        """Get reason for buy signal"""
+        if self._cross_above(self.level618):
+            level = 61.8
+        else:
+            level = 38.2
+        return f"Price crossed above Fibonacci {level}% level"
+
+    def get_sell_reason(self) -> str:
+        """Get reason for sell signal"""
+        if self._cross_below(self.level618):
+            level = 61.8
+        else:
+            level = 38.2
+        return f"Price crossed below Fibonacci {level}% level"
+
+    @classmethod
+    def get_params(cls) -> Dict[str, Any]:
+        """Get strategy parameters for UI"""
+        return {
+            'lookback': {
+                'type': 'int',
+                'default': 50,
+                'min': 20,
+                'max': 200,
+                'description': 'Lookback period for Fibonacci levels',
+            }
+        }
 
 # Strategy registry for easy access
 STRATEGIES = {
     'SMA Crossover': SMAStrategy,
     'RSI': RSIStrategy,
     'MACD': MACDStrategy,
+    'Fibonacci Retracement': FibonacciRetracementStrategy,
     'Bollinger Bands': BollingerBandsStrategy
 }
 
