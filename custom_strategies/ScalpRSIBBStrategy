@@ -1,0 +1,73 @@
+"""
+Custom Strategy: ScalpRSIBB
+"""
+import backtrader as bt
+from strategies import BaseStrategy
+
+
+class ScalpRSIBBStrategy(BaseStrategy):
+    """
+    RSI + Bollinger Bands + EMA-based scalping strategy
+    """
+
+    params = (
+        ('rsi_period', 14),
+        ('rsi_oversold', 30),
+        ('rsi_exit', 60),
+        ('bb_period', 20),
+        ('bb_devfactor', 2.0),
+        ('ema_period', 21),
+        ('printlog', True),
+    )
+
+    def _initialize_indicators(self):
+        self.rsi = bt.indicators.RSI(self.data.close, period=self.params.rsi_period)
+        self.bb = bt.indicators.BollingerBands(
+            self.data.close,
+            period=self.params.bb_period,
+            devfactor=self.params.bb_devfactor
+        )
+        self.ema = bt.indicators.EMA(self.data.close, period=self.params.ema_period)
+
+    def should_buy(self) -> bool:
+        return (
+            self.rsi[0] < self.params.rsi_oversold and
+            self.data.close[0] < self.bb.lines.bot[0] and
+            self.data.close[0] > self.ema[0] and
+            self.data.close[0] > self.data.open[0]  # Green candle
+        )
+
+    def should_sell(self) -> bool:
+        return (
+            self.rsi[0] > self.params.rsi_exit or
+            self.data.close[0] >= self.bb.lines.top[0]
+        )
+
+    @classmethod
+    def get_params(cls):
+        return {
+            'rsi_period': {
+                'type': 'int', 'default': 14, 'min': 2, 'max': 50,
+                'description': 'Period for RSI calculation'
+            },
+            'rsi_oversold': {
+                'type': 'int', 'default': 30, 'min': 10, 'max': 50,
+                'description': 'RSI level below which buy is triggered'
+            },
+            'rsi_exit': {
+                'type': 'int', 'default': 60, 'min': 40, 'max': 80,
+                'description': 'RSI level above which sell is triggered'
+            },
+            'bb_period': {
+                'type': 'int', 'default': 20, 'min': 10, 'max': 100,
+                'description': 'Bollinger Bands period'
+            },
+            'bb_devfactor': {
+                'type': 'float', 'default': 2.0, 'min': 1.0, 'max': 3.0,
+                'description': 'Bollinger Bands deviation factor'
+            },
+            'ema_period': {
+                'type': 'int', 'default': 21, 'min': 5, 'max': 50,
+                'description': 'EMA trend filter period'
+            },
+        }
