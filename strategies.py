@@ -6,6 +6,7 @@ import backtrader as bt
 from abc import abstractmethod
 from typing import Dict, Any
 from signal_extractor import StrategySignalLogger
+from custom_strategies.btc_trader import BTCTraderStrategy
 
 
 class BaseStrategy(bt.Strategy, StrategySignalLogger):
@@ -529,7 +530,8 @@ STRATEGIES = {
     'MACD': MACDStrategy,
     'Fibonacci Retracement': FibonacciRetracementStrategy,
     'Bollinger Bands': BollingerBandsStrategy,
-    'Simple': SimpleStrategy
+    'Simple': SimpleStrategy,
+    'BTC Trader': BTCTraderStrategy
 }
 
 
