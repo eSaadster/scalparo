@@ -23,12 +23,8 @@ class BTCTraderStrategy(BaseStrategy):
         self.atr = bt.indicators.ATR(self.data, period=self.params.atr_period)
         self.high24 = bt.indicators.Highest(self.data.high, period=24)
         self.low24 = bt.indicators.Lowest(self.data.low, period=24)
-        self.avg24 = bt.indicators.SimpleMovingAverage(
-            self.data.close, period=24
-        )
-        self.momentum = bt.indicators.Momentum(
-            self.data.close, period=self.params.momentum_period
-        )
+        self.avg24 = bt.indicators.SimpleMovingAverage(self.data.close, period=24)
+        self.momentum = bt.indicators.Momentum(self.data.close, period=self.params.momentum_period)
         self.lots = []
         self.allocated = 0.0
         self._sell_reason = ""
@@ -43,8 +39,9 @@ class BTCTraderStrategy(BaseStrategy):
             and price <= self.high24[0] * 0.98
         )
         return (
-            dip or momentum
-        ) and self.allocated < self.params.max_allocation
+            (dip or momentum)
+            and self.allocated < self.params.max_allocation
+        )
 
     def should_sell(self) -> bool:
         """Check all open lots for sell signals."""

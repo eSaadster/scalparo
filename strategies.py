@@ -6,6 +6,7 @@ import backtrader as bt
 from abc import abstractmethod
 from typing import Dict, Any
 from signal_extractor import StrategySignalLogger
+from custom_strategies.btc_trader import BTCTraderStrategy
 
 
 class BaseStrategy(bt.Strategy, StrategySignalLogger):
@@ -497,30 +498,30 @@ class SimpleStrategy(BaseStrategy):
         if self.last_buy_zone == zone and zone != 'D':
             return
 
-        # Additional check for zone C bounce
-        if zone == 'C':
-            period = self.params.atr_period
-            lookback = min(period, len(self))
-            lows = [self.data.low[-i] for i in range(lookback)]
-            min_low = min(lows)
-            bounce = (price - min_low) / min_low * 100
-            if bounce < 0.5:
-                return
+   # Additional check for zone C bounce
+if zone == 'C':
+    period = self.params.atr_period
+    lookback = min(period, len(self))
+    lows = [self.data.low[-i] for i in range(lookback)]
+    min_low = min(lows)
+    bounce = (price - min_low) / min_low * 100
+    if bounce < 0.5:
+        return
 
-        if zone != 'D':
-            trade_value = self._pick_chunk_size(zone)
-            if trade_value > 0:
-                size = trade_value / price
-                self.log_buy_signal(price, f'Zone {zone} entry')
-                self.log(
-                    f'BUY CREATE: Zone {zone} Price: {price:.2f}, Value: {trade_value:.2f}'
-                )
-                self.order = self.buy(size=size)
-                self.lots.append({'entry': price, 'size': size})
-                self.allocated += trade_value
+if zone != 'D':
+    trade_value = self._pick_chunk_size(zone)
+    if trade_value > 0:
+        size = trade_value / price
+        self.log_buy_signal(price, f'Zone {zone} entry')
+        self.log(
+            f'BUY CREATE: Zone {zone} Price: {price:.2f}, Value: {trade_value:.2f}'
+        )
+        self.order = self.buy(size=size)
+        self.lots.append({'entry': price, 'size': size})
+        self.allocated += trade_value
 
-                self.last_buy_time = dt
-                self.last_buy_zone = zone
+        self.last_buy_time = dt
+        self.last_buy_zone = zone
 
 # Load custom strategies after BaseStrategy definition to avoid circular imports
 from custom_strategies.btc_trader import BTCTraderStrategy
@@ -533,7 +534,7 @@ STRATEGIES = {
     'Fibonacci Retracement': FibonacciRetracementStrategy,
     'Bollinger Bands': BollingerBandsStrategy,
     'Simple': SimpleStrategy,
-    'BTC Trader': BTCTraderStrategy,
+    'BTC Trader': BTCTraderStrategy
 }
 
 
