@@ -4,7 +4,7 @@ This strategy buys BTC when price dips or shows upward momentum and
 takes profit dynamically based on volatility.
 """
 import backtrader as bt
-from strategies import BaseStrategy
+from base_strategy import BaseStrategy
 
 
 class BTCTraderStrategy(BaseStrategy):
