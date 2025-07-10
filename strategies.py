@@ -522,6 +522,9 @@ class SimpleStrategy(BaseStrategy):
                 self.last_buy_time = dt
                 self.last_buy_zone = zone
 
+# Load custom strategies after BaseStrategy definition to avoid circular imports
+from custom_strategies.btc_trader import BTCTraderStrategy
+
 # Strategy registry for easy access
 STRATEGIES = {
     'SMA Crossover': SMAStrategy,
@@ -529,7 +532,8 @@ STRATEGIES = {
     'MACD': MACDStrategy,
     'Fibonacci Retracement': FibonacciRetracementStrategy,
     'Bollinger Bands': BollingerBandsStrategy,
-    'Simple': SimpleStrategy
+    'Simple': SimpleStrategy,
+    'BTC Trader': BTCTraderStrategy,
 }
 
 
