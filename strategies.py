@@ -6,7 +6,6 @@ import backtrader as bt
 from abc import abstractmethod
 from typing import Dict, Any
 from signal_extractor import StrategySignalLogger
-from custom_strategies.btc_trader import BTCTraderStrategy
 
 
 class BaseStrategy(bt.Strategy, StrategySignalLogger):
@@ -523,6 +522,9 @@ class SimpleStrategy(BaseStrategy):
                 self.last_buy_time = dt
                 self.last_buy_zone = zone
 
+# Load custom strategies after BaseStrategy definition to avoid circular imports
+from custom_strategies.btc_trader import BTCTraderStrategy
+
 # Strategy registry for easy access
 STRATEGIES = {
     'SMA Crossover': SMAStrategy,
@@ -531,7 +533,7 @@ STRATEGIES = {
     'Fibonacci Retracement': FibonacciRetracementStrategy,
     'Bollinger Bands': BollingerBandsStrategy,
     'Simple': SimpleStrategy,
-    'BTC Trader': BTCTraderStrategy
+    'BTC Trader': BTCTraderStrategy,
 }
 
 
