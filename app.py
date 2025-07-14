@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import json
 from strategy_manager import StrategyManager
 from data_fetcher import DataFetcher
-from main import run_backtest
+from main import run_backtest, run_batch_backtest
 from report_generator import ReportGenerator
 from chart_components import ChartGenerator
 from signal_extractor import SignalExtractor
