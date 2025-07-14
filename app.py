@@ -352,6 +352,9 @@ if 'strategy_manager' not in st.session_state:
 if 'backtest_results' not in st.session_state:
     st.session_state.backtest_results = None
 
+if 'batch_results' not in st.session_state:
+    st.session_state.batch_results = None
+
 if 'chart_generator' not in st.session_state:
     st.session_state.chart_generator = ChartGenerator()
 
@@ -390,7 +393,12 @@ with st.sidebar:
         st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
         st.markdown("**📊 Market Data**")
 
-        symbol = st.text_input("Trading Symbol", value="BTC-USD", help="Enter symbol (e.g., BTC-USD, AAPL, TSLA)")
+        symbols_input = st.text_input(
+            "Trading Symbol(s)",
+            value="BTC-USD",
+            help="Enter one or more symbols separated by commas (e.g., BTC-USD, ETH-USD)"
+        )
+        symbols = [s.strip() for s in symbols_input.split(',') if s.strip()]
 
         col1, col2 = st.columns(2)
         with col1:
@@ -481,7 +489,7 @@ if run_backtest_btn:
         try:
             # Configuration
             config = {
-                'symbol': symbol,
+                'symbol': symbols if len(symbols) > 1 else symbols[0],
                 'start_date': start_date.strftime('%Y-%m-%d'),
                 'end_date': end_date.strftime('%Y-%m-%d'),
                 'interval': interval,
@@ -491,56 +499,68 @@ if run_backtest_btn:
                 'strategy_params': strategy_params
             }
 
-            # Fetch data
-            data = DataFetcher.fetch_yahoo_data(
-                symbol, interval, config['start_date'], config['end_date']
-            )
-
-            if data.empty:
-                st.error("❌ Unable to fetch market data. This could be due to:")
-                st.error("• Network restrictions or connectivity issues")
-                st.error("• API service unavailability") 
-                st.error("• Invalid symbol or date range")
-                st.info("💡 Please check your internet connection and try again later.")
-                st.stop()
-
-            if not DataFetcher.validate_data(data):
-                st.error("❌ Invalid data received. Please try different parameters.")
-                st.stop()
-
             strategy_class = st.session_state.strategy_manager.get_strategy(strategy_name)
-            cerebro, results = run_backtest(config, strategy_class, strategy_params)
 
-            # Generate reports
-            report_gen = ReportGenerator(cerebro, results, config)
-            report = report_gen.generate_full_report()
+            if len(symbols) > 1:
+                batch = run_batch_backtest(symbols, config, strategy_class, strategy_params)
+                st.session_state.batch_results = {}
+                for sym, res in batch.items():
+                    rep_gen = ReportGenerator(res['cerebro'], res['results'], res['config'])
+                    st.session_state.batch_results[sym] = rep_gen.generate_full_report()
+                st.session_state.backtest_results = None
+                st.success("✅ Batch analysis completed!")
+            else:
+                symbol = symbols[0]
+                # Fetch data
+                data = DataFetcher.fetch_yahoo_data(
+                    symbol, interval, config['start_date'], config['end_date']
+                )
 
-            # Extract signals and analytics
-            signals = st.session_state.signal_extractor.extract_from_backtest(cerebro, results)
-            formatted_signals = st.session_state.signal_extractor.format_for_plotting(signals)
+                if data.empty:
+                    st.error("❌ Unable to fetch market data. This could be due to:")
+                    st.error("• Network restrictions or connectivity issues")
+                    st.error("• API service unavailability")
+                    st.error("• Invalid symbol or date range")
+                    st.info("💡 Please check your internet connection and try again later.")
+                    st.stop()
 
-            performance_analysis = st.session_state.performance_analyzer.analyze_backtest_results(
-                cerebro, results, data
-            )
+                if not DataFetcher.validate_data(data):
+                    st.error("❌ Invalid data received. Please try different parameters.")
+                    st.stop()
 
-            benchmark_report = st.session_state.benchmark_calculator.create_benchmark_report(
-                report['metrics']['basic_performance'], symbol, 
-                config['start_date'], config['end_date']
-            )
+                cerebro, results = run_backtest(config, strategy_class, strategy_params)
 
-            st.session_state.backtest_results = {
-                'cerebro': cerebro,
-                'results': results,
-                'report': report,
-                'config': config,
-                'data': data,
-                'signals': signals,
-                'formatted_signals': formatted_signals,
-                'performance_analysis': performance_analysis,
-                'benchmark_report': benchmark_report
-            }
+                # Generate reports
+                report_gen = ReportGenerator(cerebro, results, config)
+                report = report_gen.generate_full_report()
 
-            st.success("✅ Analysis completed successfully!")
+                # Extract signals and analytics
+                signals = st.session_state.signal_extractor.extract_from_backtest(cerebro, results)
+                formatted_signals = st.session_state.signal_extractor.format_for_plotting(signals)
+
+                performance_analysis = st.session_state.performance_analyzer.analyze_backtest_results(
+                    cerebro, results, data
+                )
+
+                benchmark_report = st.session_state.benchmark_calculator.create_benchmark_report(
+                    report['metrics']['basic_performance'], symbol,
+                    config['start_date'], config['end_date']
+                )
+
+                st.session_state.backtest_results = {
+                    'cerebro': cerebro,
+                    'results': results,
+                    'report': report,
+                    'config': config,
+                    'data': data,
+                    'signals': signals,
+                    'formatted_signals': formatted_signals,
+                    'performance_analysis': performance_analysis,
+                    'benchmark_report': benchmark_report
+                }
+
+                st.session_state.batch_results = None
+                st.success("✅ Analysis completed successfully!")
 
         except Exception as e:
             st.error(f"❌ Execution failed: {str(e)}")
@@ -952,6 +972,15 @@ if st.session_state.backtest_results:
 
         with st.expander("📋 Complete Report Data"):
             st.json(report)
+
+elif st.session_state.batch_results:
+    st.markdown("## 📊 Batch Backtest Results")
+    for sym, rep in st.session_state.batch_results.items():
+        perf = rep['metrics']['basic_performance']
+        st.markdown(f"### {sym}")
+        st.write(f"Return: {perf['total_return']:.2f}%")
+        st.write(f"Final Value: ${perf['final_value']:,.2f}")
+        st.markdown('---')
 
 # Strategy creation section
 with st.expander("🛠️ Strategy Development Lab"):
