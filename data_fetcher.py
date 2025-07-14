@@ -172,7 +172,7 @@ class DataFetcher:
     def get_user_config() -> Optional[Dict]:
         """Get user configuration - can be replaced with UI input"""
         default_start, default_end = DataFetcher.get_default_dates()
-        
+
         # Default configuration
         default_config = {
             'symbol': 'BTC-USD',
@@ -182,7 +182,12 @@ class DataFetcher:
             'initial_capital': 10000,
             'commission': 0.001
         }
-        
+
+        user_input = input("Enter trading symbol(s) (comma separated) [BTC-USD]: ").strip()
+        if user_input:
+            symbols = [s.strip() for s in user_input.split(',') if s.strip()]
+            default_config['symbol'] = symbols if len(symbols) > 1 else symbols[0]
+
         return default_config
     
     @staticmethod
