@@ -65,6 +65,21 @@ def run_backtest(config: dict, strategy_class: type, strategy_params: dict = Non
     return cerebro, results
 
 
+def run_batch_backtest(symbols: list, config: dict, strategy_class: type, strategy_params: dict) -> dict:
+    """Run backtests for multiple symbols."""
+    batch_results = {}
+    for symbol in symbols:
+        cfg = config.copy()
+        cfg['symbol'] = symbol
+        cerebro, results = run_backtest(cfg, strategy_class, strategy_params)
+        batch_results[symbol] = {
+            'cerebro': cerebro,
+            'results': results,
+            'config': cfg,
+        }
+    return batch_results
+
+
 def main():
     """Main function to run the trading system"""
     
@@ -82,19 +97,26 @@ def main():
     config['strategy_name'] = strategy_name
     config['strategy_params'] = strategy_params
     
-    # Run backtest
-    cerebro, results = run_backtest(config, strategy_class, strategy_params)
-    
-    # Generate report
-    report_gen = ReportGenerator(cerebro, results, config)
-    report_gen.print_report()
-    report_gen.save_report()
-    
-    # Optional: Plot results
-    try:
-        cerebro.plot(style='candlestick')
-    except Exception as e:
-        print(f"Plotting failed: {e}")
+    symbols = config['symbol'] if isinstance(config['symbol'], list) else [config['symbol']]
+
+    if len(symbols) > 1:
+        batch_results = run_batch_backtest(symbols, config, strategy_class, strategy_params)
+        for sym, res in batch_results.items():
+            report_gen = ReportGenerator(res['cerebro'], res['results'], res['config'])
+            report_gen.print_report()
+            report_gen.save_report(f"trading_report_{sym}.json")
+    else:
+        cerebro, results = run_backtest(config, strategy_class, strategy_params)
+        report_gen = ReportGenerator(cerebro, results, config)
+        report_gen.print_report()
+        report_gen.save_report()
+
+    # Optional: Plot results for single symbol run
+    if len(symbols) == 1:
+        try:
+            cerebro.plot(style='candlestick')
+        except Exception as e:
+            print(f"Plotting failed: {e}")
 
 
 if __name__ == "__main__":

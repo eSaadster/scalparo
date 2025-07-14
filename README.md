@@ -58,6 +58,12 @@ Run backtests from the command line:
 ```bash
 python main.py
 ```
+You can provide multiple symbols when prompted. Separate them with commas to run
+batch backtests:
+```bash
+# Example input when prompted for symbols
+BTC-USD, ETH-USD, AAPL
+```
 
 ## Creating Custom Strategies
 
