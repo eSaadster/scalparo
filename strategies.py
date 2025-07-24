@@ -408,6 +408,7 @@ class SimpleStrategy(BaseStrategy):
 
 # Load custom strategies after BaseStrategy definition to avoid circular imports
 from custom_strategies.btc_trader import BTCTraderStrategy
+from custom_strategies.multi_symbol_momentum import MultiSymbolMomentumStrategy
 
 # Strategy registry for easy access
 STRATEGIES = {
@@ -417,7 +418,8 @@ STRATEGIES = {
     'Fibonacci Retracement': FibonacciRetracementStrategy,
     'Bollinger Bands': BollingerBandsStrategy,
     'Simple': SimpleStrategy,
-    'BTC Trader': BTCTraderStrategy
+    'BTC Trader': BTCTraderStrategy,
+    'Multi-Symbol Momentum': MultiSymbolMomentumStrategy
 }
 
 
